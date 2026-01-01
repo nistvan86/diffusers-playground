@@ -1,0 +1,27 @@
+[project]
+name = "diffusers-playground"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11, <3.12"
+dependencies = [
+    "diffusers[torch]>=0.36.0",
+    "nicegui>=3.4.1",
+    "torch>=2.8, <2.9",
+    "torchvision>=0.23, <0.24",
+    "transformers>=4.57.3",
+    #"flash-attn @ https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.2/flash_attn-2.8.3+cu128torch2.8-cp311-cp311-linux_x86_64.whl"
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu128" },
+]
+torchvision = [
+    { index = "pytorch-cu128" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

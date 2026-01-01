@@ -1,0 +1,3 @@
+# General guidlines
+
+This project uses the UV Python package manager, so every command has to use the Python virtual environment created under `.venv`.
