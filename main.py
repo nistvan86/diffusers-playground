@@ -88,6 +88,7 @@ def generate_zimage(prompt, seed=0):
         num_inference_steps=9,  # This actually results in 8 DiT forwards
         guidance_scale=0.0,  # Guidance should be 0 for the Turbo models
         generator=torch.Generator("cuda").manual_seed(seed),
+        max_sequence_length=1024,
         callback_on_step_end=on_step_end,
     ).images[0]
 
@@ -123,25 +124,42 @@ def page():
 
     ui.dark_mode().enable()
 
-    # Prompt box
-    prompt = ui.textarea(label='Prompt', placeholder='enter your prompt here')
+    with ui.splitter(value=60).classes('w-full') as splitter:
+        with splitter.before as before:
+            # Prompt box
+            prompt = ui.textarea(label='Prompt', placeholder='enter your prompt here').classes('w-full')
+        with splitter.after as after:
+            with ui.column():
+                # Seed
+                seed = ui.number(label='Seed', value=0, min=0, format='%d', precision=0)
 
-    # Generate button
-    generate = ui.button("Generate")
-    generate.props("flat")
-    generate.disable()
+                with ui.row():
+                    # Generate button
+                    generate = ui.button("Generate")
+                    generate.props("flat")
+                    generate.disable()
+
+                    # Spinner while Z-Image loads
+                    spinner = ui.spinner(size='2em')
 
     async def start_generate():
         generate.disable()
-        background_tasks.create(run.io_bound(generate_zimage, prompt.value))
+        background_tasks.create(run.io_bound(generate_zimage, prompt.value, int(seed.value)))
 
     generate.on_click(start_generate)
     z_image_generator_finished.subscribe(lambda: generate.enable())
 
+    def on_z_image_loaded():
+        generate.enable()
+        spinner.visible = False
+
+    if z_image_loaded:
+        on_z_image_loaded()
+
     if z_image_loaded and not z_image_generator_running:
         generate.enable()
 
-    z_image_loaded_event.subscribe(lambda: generate.enable())
+    z_image_loaded_event.subscribe(on_z_image_loaded)
 
     # Preview box
     preview = ui.interactive_image()
@@ -154,7 +172,8 @@ def root():
 
 def startup():
     background_tasks.create(run.io_bound(init_zimage))
+    pass
 
 app.on_startup(startup)
 
-ui.run(root, reload=False)
+ui.run(root, reload=True)
