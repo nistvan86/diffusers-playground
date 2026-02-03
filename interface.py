@@ -4,30 +4,35 @@ import asyncio
 def build_interface(model):
     ui.dark_mode().enable()
 
-    with ui.splitter(value=60).classes('w-full') as splitter:
-        with splitter.before as _:
-            # Prompt box
-            prompt = ui.textarea(label='Prompt', placeholder="Enter your prompt here.", value='Look up to the sky where a small one-man light plane drags a banner behind with the text "IT WORKS!", attached with strings.').classes('w-full')
-        with splitter.after as _:
-            with ui.column():
-                # Seed
-                seed = ui.number(label='Seed', value=0, min=0, format='%d', precision=0)
+    with ui.column().classes('w-full'):
+        with ui.row().classes('w-full'):
+            with ui.card().classes('w-full'):
+                with ui.splitter(value=60).classes('w-full') as splitter:
+                    with splitter.before as _:
+                        # Prompt box
+                        prompt = ui.textarea(label='Prompt', placeholder="Enter your prompt here.", value='Look up to the sky where a small one-man light plane drags a banner behind with the text "IT WORKS!", attached with strings.').classes('w-full q-pa-sm').props('outlined')
+                    with splitter.after as _:
+                        with ui.column().classes('q-pa-sm'):
+                            # Seed
+                            seed = ui.number(label='Seed', value=0, min=0, format='%d', precision=0).props('outlined')
 
-                with ui.row():
-                    # Generate button
-                    generate = ui.button("Generate")
-                    generate.props("flat")
-                    
-                    if not model.is_loaded:
-                        generate.disable()
+                            with ui.row().classes('q-pb-sm'):
+                                # Generate button
+                                generate = ui.button("GO!")
+                                generate.props("color=primary")
+                                
+                                if not model.is_loaded:
+                                    generate.disable()
 
-                    # Spinner while Z-Image loads
-                    spinner = ui.spinner(size='2em')
-                    if model.is_loaded:
-                        spinner.visible = False
+                                # Spinner while Z-Image loads
+                                spinner = ui.spinner(size='2em')
+                                if model.is_loaded:
+                                    spinner.visible = False
+        with ui.row():
+            # Preview box
+            preview = ui.image().props('bordered')
+            preview.style('width: 1024px; height: 1024px').props('no-transition')
 
-    # Preview box
-    preview = ui.interactive_image()
 
     def update_preview(base64_str: str) -> None:
         preview.set_source(base64_str)
