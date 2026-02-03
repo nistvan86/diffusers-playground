@@ -2,6 +2,9 @@ import base64
 
 import torch
 from diffusers.pipelines.z_image.pipeline_z_image import ZImagePipeline
+from diffusers.pipelines.z_image.pipeline_output import ZImagePipelineOutput
+
+from typing import cast
 
 from io import BytesIO
 from nicegui import Event, ui, app, background_tasks, run
@@ -26,6 +29,8 @@ LATENT2RGB_COEFFICIENTS = [
     [-0.0826, -0.0540, -0.0286],
 ]
 LATENT2RGB_BIAS = [0.4848, 0.4871, 0.4499]
+
+pipe: ZImagePipeline
 
 z_image_loaded_event = Event()
 z_image_preview_update_event = Event[str]()
@@ -81,7 +86,7 @@ def generate_zimage(prompt, seed=0):
     global z_image_generator_running
 
     # Generate Image
-    image = pipe(
+    output: ZImagePipelineOutput = cast(ZImagePipelineOutput, pipe(
         prompt=prompt,
         height=1024,
         width=1024,
@@ -90,7 +95,9 @@ def generate_zimage(prompt, seed=0):
         generator=torch.Generator("cuda").manual_seed(seed),
         max_sequence_length=1024,
         callback_on_step_end=on_step_end,
-    ).images[0]
+    ))
+
+    image = output.images[0]
 
     torch.cuda.empty_cache()
 
@@ -104,7 +111,7 @@ def init_zimage():
     global pipe
     global z_image_loaded
 
-    # Use bfloat16 for optimal performance on supported GPUs
+    # Use bfloat16 for optimal performance on supported GPU
     pipe = ZImagePipeline.from_pretrained(
         "Tongyi-MAI/Z-Image-Turbo",
         torch_dtype=torch.bfloat16,
@@ -125,10 +132,10 @@ def page():
     ui.dark_mode().enable()
 
     with ui.splitter(value=60).classes('w-full') as splitter:
-        with splitter.before as before:
+        with splitter.before as _:
             # Prompt box
             prompt = ui.textarea(label='Prompt', placeholder='enter your prompt here').classes('w-full')
-        with splitter.after as after:
+        with splitter.after as _:
             with ui.column():
                 # Seed
                 seed = ui.number(label='Seed', value=0, min=0, format='%d', precision=0)
