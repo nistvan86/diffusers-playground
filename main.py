@@ -1,30 +1,17 @@
 from nicegui import ui, app, Client, background_tasks, run
 import model
 import interface
-import importlib
-from watchfiles import awatch
+import util
 
 # Initialize the model singleton
 z_image_model = model.ZImageModel()
 
 @ui.page('/')
+@util.hot_reload(interface)
 def index():
     interface.build_interface(z_image_model)
 
-async def watch_reload():
-    async for changes in awatch('interface.py'):
-        try:
-            print(f"Reloading interface due to changes: {changes}")
-            importlib.reload(interface)
-            for client in Client.instances.values():
-                with client:
-                    ui.run_javascript('window.location.reload()')
-        except Exception as e:
-            print(f"Error reloading interface: {e}")
-
 def startup():
-    # Start checking for reloads
-    background_tasks.create(watch_reload())
     # Start loading the model in a separate thread
     background_tasks.create(run.io_bound(z_image_model.load))
 
