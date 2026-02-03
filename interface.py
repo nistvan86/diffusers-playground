@@ -18,8 +18,7 @@ def build_interface(model):
 
                             with ui.row().classes('q-pb-sm'):
                                 # Generate button
-                                generate = ui.button("GO!")
-                                generate.props("color=primary")
+                                generate = ui.button("GO!").props("color=primary")
                                 
                                 if not model.is_loaded:
                                     generate.disable()
