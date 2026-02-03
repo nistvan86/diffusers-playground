@@ -1,7 +1,14 @@
 from nicegui import ui, background_tasks, run
 import asyncio
+import sys
+import util
+import services.model
 
-def build_interface(model):
+# Access singleton
+model = services.model.instance
+
+@util.hot_reload_page('/')
+def index():
     ui.dark_mode().enable()
 
     with ui.column().classes('w-full'):

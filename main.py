@@ -1,15 +1,9 @@
-from nicegui import ui, app, Client, background_tasks, run
-import model
-import interface
-import util
+from nicegui import ui, app, background_tasks, run
+import services.model
+import view.interface
 
-# Initialize the model singleton
-z_image_model = model.ZImageModel()
-app.on_startup(lambda: background_tasks.create(run.io_bound(z_image_model.load)))
-
-@util.hot_reload_page('/', interface)
-def index():
-    interface.build_interface(z_image_model)
+# Start loading the model on startup
+app.on_startup(lambda: background_tasks.create(run.io_bound(services.model.instance.load)))
 
 if __name__ in {"__main__", "__mp_main__"}:
     # IMPORTANT: reload=False is required for our custom hot-reload to work 

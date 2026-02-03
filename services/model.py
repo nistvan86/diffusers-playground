@@ -119,3 +119,6 @@ class ZImageModel:
         result = Latent2RGB.imagetobase64(image)
         self.finished_event.emit(result)
         return result
+
+# Singleton instance
+instance = ZImageModel()

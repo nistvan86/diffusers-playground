@@ -1,5 +1,6 @@
 from nicegui import core, Event, ui, background_tasks, Client, app, context
 import sys
+import os
 import importlib
 from watchfiles import awatch
 from types import ModuleType
@@ -30,8 +31,12 @@ class HotReloader:
             if not hasattr(module, '__file__'):
                 print(f"Warning: Module {module_name} has no __file__ attribute, cannot watch.")
                 return
+            
+            # Watch the directory containing the module
+            directory = os.path.dirname(module.__file__)
+            print(f"Watching directory {directory} for changes...")
                 
-            async for changes in awatch(module.__file__):
+            async for changes in awatch(directory):
                 try:
                     print(f"Reloading {module_name} due to changes: {changes}")
                     try:
@@ -60,8 +65,14 @@ class HotReloader:
 # Global singleton instance
 hot_reloader = HotReloader()
 
-def hot_reload_page(path: str, module: ModuleType, **kwargs):
+def hot_reload_page(path: str, module: ModuleType = None, **kwargs):
     def decorator(func):
+        # Infer module if not provided
+        nonlocal module
+        if module is None:
+             import inspect
+             module = inspect.getmodule(func)
+
         hot_reloader.enable_hot_reload(module)
         
         @ui.page(path, **kwargs)
