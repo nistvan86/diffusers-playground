@@ -7,7 +7,7 @@ def build_interface(model):
     with ui.splitter(value=60).classes('w-full') as splitter:
         with splitter.before as _:
             # Prompt box
-            prompt = ui.textarea(label='Prompt', placeholder='enter your prompt here').classes('w-full')
+            prompt = ui.textarea(label='Prompt', placeholder="Enter your prompt here.", value='Look up to the sky where a small one-man light plane drags a banner behind with the text "IT WORKS!", attached with strings.').classes('w-full')
         with splitter.after as _:
             with ui.column():
                 # Seed
@@ -32,7 +32,8 @@ def build_interface(model):
     def update_preview(base64_str: str) -> None:
         preview.set_source(base64_str)
 
-    def on_generation_finished():
+    def on_generation_finished(base64_str: str) -> None:
+        preview.set_source(base64_str)
         generate.enable()
 
     async def run_generation():
@@ -48,7 +49,6 @@ def build_interface(model):
 
     # Event subscriptions
     model.preview_event.subscribe(update_preview)
-    model.finished_event.subscribe(update_preview)
     model.finished_event.subscribe(on_generation_finished)
 
     # Event-driven model loading

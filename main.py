@@ -13,11 +13,14 @@ def index():
 
 async def watch_reload():
     async for changes in awatch('interface.py'):
-        print(f"Reloading interface due to changes: {changes}")
-        importlib.reload(interface)
-        for client in Client.instances.values():
-            with client:
-                ui.run_javascript('window.location.reload()')
+        try:
+            print(f"Reloading interface due to changes: {changes}")
+            importlib.reload(interface)
+            for client in Client.instances.values():
+                with client:
+                    ui.run_javascript('window.location.reload()')
+        except Exception as e:
+            print(f"Error reloading interface: {e}")
 
 def startup():
     # Start checking for reloads
