@@ -4,7 +4,7 @@ import torch
 from diffusers.pipelines.z_image.pipeline_z_image import ZImagePipeline
 from diffusers.pipelines.z_image.pipeline_output import ZImagePipelineOutput
 
-from typing import cast
+from typing import Dict, Any, Optional, cast
 
 from io import BytesIO
 from nicegui import Event, ui, app, background_tasks, run
@@ -30,45 +30,52 @@ LATENT2RGB_COEFFICIENTS = [
 ]
 LATENT2RGB_BIAS = [0.4848, 0.4871, 0.4499]
 
-pipe: ZImagePipeline
+pipe: Optional[ZImagePipeline] = None
 
 z_image_loaded_event = Event()
 z_image_preview_update_event = Event[str]()
-z_image_loaded = False
-z_image_generator_running = False
+z_image_loaded: bool = False
+z_image_generator_running: bool = False
 z_image_generator_finished = Event()
 
-def imagetobase64(image):
+def imagetobase64(image: Image.Image) -> str:
     buffered = BytesIO()
     image.save(buffered, format="PNG")
     return f'data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode("utf-8")}'
 
-def latent2rgb(latents):
-    with torch.no_grad():
-        if not hasattr(latent2rgb, "factors"):
-            latent2rgb.factors = torch.tensor(
-                LATENT2RGB_COEFFICIENTS, device=latents.device, dtype=latents.dtype
-            )
-            latent2rgb.bias = torch.tensor(
-                LATENT2RGB_BIAS, device=latents.device, dtype=latents.dtype
-            )
+class Latent2RGB:
+    def __init__(self) -> None:
+        self.factors: Optional[torch.Tensor] = None
+        self.bias: Optional[torch.Tensor] = None
 
-        # Latent2RGB Preview
-        # [B, 16, H, W] -> [B, H, W, 16]
-        latents_perm = latents.permute(0, 2, 3, 1)
+    def __call__(self, latents: torch.Tensor) -> str:
+        with torch.no_grad():
+            if self.factors is None or self.bias is None:
+                self.factors = torch.tensor(
+                    LATENT2RGB_COEFFICIENTS, device=latents.device, dtype=latents.dtype
+                )
+                self.bias = torch.tensor(
+                    LATENT2RGB_BIAS, device=latents.device, dtype=latents.dtype
+                )
 
-        # [B, H, W, 16] @ [16, 3] -> [B, H, W, 3]
-        image = torch.matmul(latents_perm, latent2rgb.factors) + latent2rgb.bias
+            # Latent2RGB Preview
+            # [B, 16, H, W] -> [B, H, W, 16]
+            latents_perm = latents.permute(0, 2, 3, 1)
 
-        image = image.clamp(0, 1)
-        image = image.cpu().float().numpy()
-        image = (image * 255).round().astype("uint8")
+            # [B, H, W, 16] @ [16, 3] -> [B, H, W, 3]
+            image = torch.matmul(latents_perm, self.factors) + self.bias
 
-        return imagetobase64(Image.fromarray(image[0]))
+            image = image.clamp(0, 1)
+            image = image.cpu().float().numpy()
+            image = (image * 255).round().astype("uint8")
 
-should_stop_pipeline = False
+            return imagetobase64(Image.fromarray(image[0]))
 
-def on_step_end(pipe, step_index, timestep, callback_kwargs):
+latent2rgb = Latent2RGB()
+
+should_stop_pipeline: bool = False
+
+def on_step_end(pipe: Any, step_index: int, timestep: Any, callback_kwargs: Dict[str, Any]) -> Dict[str, Any]:
     global should_stop_pipeline
 
     if should_stop_pipeline:
@@ -81,9 +88,13 @@ def on_step_end(pipe, step_index, timestep, callback_kwargs):
     return callback_kwargs
 
 
-def generate_zimage(prompt, seed=0):
+def generate_zimage(prompt: str, seed: int = 0) -> None:
     global pipe
     global z_image_generator_running
+
+    if pipe is None:
+        print("Pipeline not initialized")
+        return
 
     # Generate Image
     output: ZImagePipelineOutput = cast(ZImagePipelineOutput, pipe(
@@ -107,7 +118,7 @@ def generate_zimage(prompt, seed=0):
     z_image_generator_finished.emit(None)
 
 
-def init_zimage():
+def init_zimage() -> None:
     global pipe
     global z_image_loaded
 
@@ -125,7 +136,7 @@ def init_zimage():
     z_image_loaded_event.emit(None)
 
 @ui.page("/")
-def page():
+def page() -> None:
     global z_image_loaded
     global z_image_generator_running
 
@@ -149,14 +160,14 @@ def page():
                     # Spinner while Z-Image loads
                     spinner = ui.spinner(size='2em')
 
-    async def start_generate():
+    async def start_generate() -> None:
         generate.disable()
         background_tasks.create(run.io_bound(generate_zimage, prompt.value, int(seed.value)))
 
     generate.on_click(start_generate)
     z_image_generator_finished.subscribe(lambda: generate.enable())
 
-    def on_z_image_loaded():
+    def on_z_image_loaded() -> None:
         generate.enable()
         spinner.visible = False
 
@@ -170,7 +181,9 @@ def page():
 
     # Preview box
     preview = ui.interactive_image()
-    z_image_preview_update_event.subscribe(lambda base64: preview.set_source(base64))
+    def update_preview(base64: str) -> None:
+        preview.set_source(base64)
+    z_image_preview_update_event.subscribe(update_preview)  # type: ignore
 
 def root():
     ui.sub_pages({
