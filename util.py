@@ -4,8 +4,6 @@ import os
 import importlib
 from watchfiles import awatch
 from types import ModuleType
-from collections import defaultdict
-from weakref import WeakSet
 import functools
 
 class ThreadSafeEvent(Event):
@@ -18,7 +16,6 @@ class ThreadSafeEvent(Event):
 class HotReloader:
     def __init__(self):
         self._watched_modules = set()
-        self._module_clients = defaultdict(WeakSet)
 
     def enable_hot_reload(self, module: ModuleType):
         module_name = module.__name__
@@ -46,7 +43,7 @@ class HotReloader:
                          continue
 
                     # Reload only clients associated with this module
-                    for client in self._module_clients[module_name]:
+                    for client in Client.instances.values():
                         try:
                             with client:
                                 ui.run_javascript('window.location.reload()')
@@ -58,27 +55,20 @@ class HotReloader:
 
         app.on_startup(lambda: background_tasks.create(watch_reload()))
 
-    def register_client(self, module_name: str, client: Client):
-        self._module_clients[module_name].add(client)
-
 
 # Global singleton instance
 hot_reloader = HotReloader()
 
-def hot_reload_page(path: str, module: ModuleType = None, **kwargs):
+def page(path: str, **kwargs):
     def decorator(func):
-        # Infer module if not provided
-        nonlocal module
-        if module is None:
-             import inspect
-             module = inspect.getmodule(func)
+        import inspect
+        module = inspect.getmodule(func)
 
         hot_reloader.enable_hot_reload(module)
         
         @ui.page(path, **kwargs)
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-             hot_reloader.register_client(module.__name__, context.client)
              return func(*args, **kwargs)
              
         return wrapper

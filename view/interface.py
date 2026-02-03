@@ -7,7 +7,7 @@ import services.model
 # Access singleton
 model = services.model.instance
 
-@util.hot_reload_page('/')
+@util.page('/')
 def index():
     ui.dark_mode().enable()
 
