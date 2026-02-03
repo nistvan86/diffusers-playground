@@ -38,22 +38,18 @@ def build_interface(model):
     async def run_generation():
         generate.disable()
         # Run the IO/GPU bound task in a separate thread to not block the event loop
-        # We pass the update_preview callback to the model
-        result_base64 = await run.io_bound(
+        await run.io_bound(
             model.generate, 
             prompt.value, 
-            int(seed.value), 
-            on_preview=lambda p: update_preview(p) # This lambda will be called from the thread
-            # NOTE: updating UI from a thread is generally unsafe in some GUIs, 
-            # but NiceGUI/NiceGUI's binding might handle it or we might need `ui.run_javascript` or `ui.notify` wrappers.
-            # Usually manipulating the element props is thread-safe enough or we might need `invoke_from_thread`.
-            # Let's wrap it in a safer way if needed. 
-            # `run.io_bound` runs in executor. 
+            int(seed.value)
         )
-        update_preview(result_base64)
-        on_generation_finished()
 
     generate.on_click(run_generation)
+
+    # Event subscriptions
+    model.preview_event.subscribe(update_preview)
+    model.finished_event.subscribe(update_preview)
+    model.finished_event.subscribe(on_generation_finished)
 
     # Event-driven model loading
     def enable_generation(_=None):
