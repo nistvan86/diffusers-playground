@@ -67,6 +67,7 @@ class ZImageModel:
         self.pipe: Optional[ZImagePipeline] = None
         self.latent2rgb = Latent2RGB()
         self.should_stop_pipeline: bool = False
+        self.is_generating: bool = False
         self.is_loaded: bool = False
         self.loaded_event = ThreadSafeEvent()
         self.preview_event = ThreadSafeEvent()
@@ -98,6 +99,9 @@ class ZImageModel:
     def generate(self, prompt: str, seed: int = 0) -> str:
         if self.pipe is None:
             raise RuntimeError("Pipeline not initialized")
+        if self.is_generating:
+            raise RuntimeError("Pipeline is already generating")
+        self.is_generating = True
 
         self.should_stop_pipeline = False
 
@@ -117,6 +121,7 @@ class ZImageModel:
         torch.cuda.empty_cache()
         
         result = Latent2RGB.imagetobase64(image)
+        self.is_generating = False
         self.finished_event.emit(result)
         return result
 

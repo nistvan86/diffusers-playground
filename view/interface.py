@@ -27,7 +27,7 @@ def index():
                                 # Generate button
                                 generate = ui.button("GO!").props("color=primary")
                                 
-                                if not model.is_loaded:
+                                if not model.is_loaded or model.is_generating:
                                     generate.disable()
 
                                 # Spinner while Z-Image loads
@@ -64,13 +64,7 @@ def index():
 
     # Event-driven model loading
     def enable_generation(_=None):
-        if model.is_loaded:
-            generate.enable()
-            spinner.visible = False
+        generate.enable()
+        spinner.visible = False
 
-    # Check immediately
-    if model.is_loaded:
-        enable_generation()
-    else:
-        # Simple subscription! Unsubscription is handled automatically by NiceGUI.
-        model.loaded_event.subscribe(enable_generation)
+    model.loaded_event.subscribe(enable_generation)
