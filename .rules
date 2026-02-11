@@ -1,3 +1,0 @@
-# General guidlines
-
-This project uses the `uv` Python package manager. Always use `uv` commands (e.g., `uv pip install`, `uv run`) instead of direct `pip` or `python` where applicable. Ensure commands run within the `.venv` environment.
